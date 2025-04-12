@@ -32,43 +32,43 @@ const Query = () => {
   const presetQueries = [
     {
       name: 'Query 1',
-      query: 'SELECT * FROM Customer LIMIT 5;'
+      query: "SELECT g.Title AS Game_Title,g.Rating,p.Publisher_ID,p.License_Number,COALESCE(COUNT(cg.Game_ID),0) AS Total_Purchases FROM Game g JOIN Publisher p ON g.Publisher_ID=p.Publisher_ID LEFT JOIN Cart_Game cg ON g.Game_ID=cg.Game_ID WHERE g.Genre='RPG' GROUP BY g.Game_ID,g.Title,g.Rating,p.Publisher_ID,p.License_Number;"
     },
     {
       name: 'Query 2',
-      query: 'SELECT Game_ID, Title, Price FROM Game ORDER BY Price DESC LIMIT 5;'
+      query: "SELECT p.Publisher_ID,p.License_Number,total_revenue FROM Publisher p JOIN (SELECT g.Publisher_ID,SUM(c.Total) AS total_revenue FROM Game g JOIN Cart c ON g.Game_ID=c.Cart_ID GROUP BY g.Publisher_ID) revenue_per_publisher ON p.Publisher_ID=revenue_per_publisher.Publisher_ID WHERE total_revenue=(SELECT MAX(total_revenue) FROM (SELECT SUM(c.Total) AS total_revenue FROM Game g JOIN Cart c ON g.Game_ID=c.Cart_ID GROUP BY g.Publisher_ID) subquery);"
     },
     {
       name: 'Query 3',
-      query: 'SELECT Publisher_ID, COUNT(*) as GameCount FROM Game GROUP BY Publisher_ID LIMIT 5;'
+      query: "SELECT c.Customer_ID,c.Name,SUM(o.Total) AS Total_Spent FROM Customer c JOIN Orders o ON c.Customer_ID=o.Customer_ID GROUP BY c.Customer_ID,c.Name HAVING SUM(o.Total)>(SELECT AVG(Total) FROM Orders);"
     },
     {
       name: 'Query 4',
-      query: 'SELECT c.Name, COUNT(o.Order_ID) as OrderCount FROM Customer c LEFT JOIN Orders o ON c.Customer_ID = o.Customer_ID GROUP BY c.Customer_ID LIMIT 5;'
+      query: "SELECT p.Publisher_ID,p.License_Number,p.Type FROM Publisher p WHERE p.Publisher_ID NOT IN (SELECT DISTINCT g.Publisher_ID FROM Game g);"
     },
     {
       name: 'Query 5',
-      query: 'SELECT g.Title, COUNT(od.Order_ID) as TimesSold FROM Game g LEFT JOIN OrderDetails od ON g.Game_ID = od.Game_ID GROUP BY g.Game_ID ORDER BY TimesSold DESC LIMIT 5;'
+      query: "SELECT c.Customer_ID,c.Name,COUNT(o.Order_ID) AS Total_Orders,CASE WHEN COUNT(o.Order_ID)>=20 THEN 'Loyal' ELSE 'Regular' END AS Customer_Type FROM Customer c LEFT JOIN Orders o ON c.Customer_ID=o.Customer_ID GROUP BY c.Customer_ID,c.Name;"
     },
     {
       name: 'Query 6',
-      query: 'SELECT AVG(Price) as AvgPrice, Genre FROM Game GROUP BY Genre;'
+      query: "SELECT g.Game_ID,g.Title,g.Rating+COUNT(r.Customer_ID) AS Score FROM Game g LEFT JOIN Reviews r ON g.Game_ID=r.Game_ID GROUP BY g.Game_ID ORDER BY Score DESC LIMIT 3;"
     },
     {
       name: 'Query 7',
-      query: 'SELECT Payment_Method, COUNT(*) as UseCount FROM Orders GROUP BY Payment_Method;'
+      query: "SELECT Mod_ID,Genre,Issues_resolved FROM Moderator WHERE Issues_resolved<(SELECT AVG(Issues_resolved) FROM Moderator);"
     },
     {
       name: 'Query 8',
-      query: 'SELECT c.Name, SUM(o.Total) as TotalSpent FROM Customer c JOIN Orders o ON c.Customer_ID = o.Customer_ID GROUP BY c.Customer_ID ORDER BY TotalSpent DESC LIMIT 5;'
+      query: "SELECT P.Publisher_id,P.Type FROM Publisher P LEFT JOIN Game G ON P.Publisher_id=G.Publisher_ID WHERE G.Game_ID IS NULL;"
     },
     {
       name: 'Query 9',
-      query: 'SELECT MONTH(OrderDate) as Month, COUNT(*) as OrderCount FROM Orders GROUP BY MONTH(OrderDate);'
+      query: "SELECT Forum_ID,Rating,upvote_downvote_ratio AS ratio FROM Blog ORDER BY ratio DESC LIMIT 5;"
     },
     {
       name: 'Query 10',
-      query: 'SELECT g.Title, g.Price, g.Genre FROM Game g WHERE g.Price > (SELECT AVG(Price) FROM Game) ORDER BY g.Price DESC LIMIT 5;'
+      query: "SELECT DISTINCT o.Customer_id FROM Orders o JOIN Game g ON o.customer_id=o.customer_id LEFT JOIN Reviews r ON g.game_id=r.game_id AND o.customer_id=r.customer_id GROUP BY o.customer_id HAVING COUNT(DISTINCT g.game_id)=COUNT(r.game_id);"
     }
   ];
 
