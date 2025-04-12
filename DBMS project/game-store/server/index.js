@@ -214,6 +214,24 @@ app.post('/api/orders', async (req, res) => {
   }
 });
 
+// Custom SQL query endpoint
+app.post('/api/query', async (req, res) => {
+  const { query } = req.body;
+
+  // Basic security check - only allow SELECT queries
+  if (!query.trim().toLowerCase().startsWith('select')) {
+    return res.status(403).json({ error: 'Only SELECT queries are allowed' });
+  }
+
+  try {
+    const [results] = await pool.query(query);
+    res.json(results);
+  } catch (error) {
+    console.error('Error executing query:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

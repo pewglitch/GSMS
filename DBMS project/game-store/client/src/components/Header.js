@@ -40,6 +40,7 @@ const Header = () => {
     { text: 'Customers', icon: <CustomersIcon />, path: '/customers' },
     { text: 'Publishers', icon: <PublishersIcon />, path: '/publishers' },
     { text: 'Cart', icon: <CartIcon />, path: '/cart' },
+    { text: 'Query', icon: <HomeIcon />, path: '/query' }
   ];
 
   const drawer = (

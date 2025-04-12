@@ -17,6 +17,7 @@ import CustomerDetails from './pages/CustomerDetails';
 import Publishers from './pages/Publishers';
 import Cart from './pages/Cart';
 import Orders from './pages/Orders';
+import Query from './pages/Query';
 
 // Theme
 const theme = createTheme({
@@ -64,6 +65,7 @@ function App() {
             <Route path="/publishers" element={<Publishers />} />
             <Route path="/cart" element={<Cart />} />
             <Route path="/orders/:customerId" element={<Orders />} />
+            <Route path="/query" element={<Query />} />
           </Routes>
           <Footer />
         </Router>
