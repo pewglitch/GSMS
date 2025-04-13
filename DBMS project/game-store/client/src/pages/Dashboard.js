@@ -18,7 +18,20 @@ import {
   Business as PublishersIcon
 } from '@mui/icons-material';
 import { getGames, getCustomers, getPublishers } from '../services/api';
-
+<Container
+  maxWidth="lg"
+  sx={{
+    mt: 4,
+    mb: 4,
+    backgroundImage: 'url("/images/background.jpg")',
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+    backgroundRepeat: 'no-repeat',
+    borderRadius: 2,
+    padding: 3,
+    minHeight: '100vh', // to ensure the image covers the whole viewport height
+  }}
+></Container>
 const StatCard = ({ title, value, icon, color }) => {
   return (
     <Card sx={{ height: '100%' }}>

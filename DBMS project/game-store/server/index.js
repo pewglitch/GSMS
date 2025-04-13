@@ -232,6 +232,96 @@ app.post('/api/query', async (req, res) => {
   }
 });
 
+// Login endpoint
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { identifier, userType } = req.body;
+    
+    let query = '';
+    let params = [];
+    
+    if (userType === 'customer') {
+      query = 'SELECT * FROM Customer WHERE Billing_Email = ?';
+      params = [identifier];
+    } else {
+      query = 'SELECT * FROM Publisher WHERE License_Number = ?';
+      params = [identifier];
+    }
+
+    const [rows] = await pool.query(query, params);
+    
+    if (rows.length === 0) {
+      return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    const user = rows[0];
+    const userTypeData = userType === 'customer' ? {
+      customer_id: user.Customer_ID,
+      name: user.Name,
+      email: user.Billing_Email,
+      payment_method: user.Payment_Method
+    } : {
+      publisher_id: user.Publisher_ID,
+      license_number: user.License_Number,
+      type: user.Type
+    };
+
+    res.json({
+      user: userTypeData,
+      userType: userType
+    });
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ error: 'Login failed' });
+  }
+});
+
+// Register endpoint
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    const { identifier, userType, name, paymentMethod, type } = req.body;
+    
+    if (userType === 'customer') {
+      const [rows] = await pool.query('SELECT * FROM Customer WHERE Billing_Email = ?', [identifier]);
+      if (rows.length > 0) {
+        return res.status(400).json({ error: 'Email already registered' });
+      }
+
+      await pool.query(
+        'INSERT INTO Customer (Name, Billing_Email, Payment_Method) VALUES (?, ?, ?)',
+        [name, identifier, paymentMethod]
+      );
+    } else {
+      const [rows] = await pool.query('SELECT * FROM Publisher WHERE License_Number = ?', [identifier]);
+      if (rows.length > 0) {
+        return res.status(400).json({ error: 'License number already registered' });
+      }
+
+      await pool.query(
+        'INSERT INTO Publisher (License_Number, Type) VALUES (?, ?)',
+        [identifier, type]
+      );
+    }
+
+    // Get the newly created user
+    const [result] = await pool.query('SELECT LAST_INSERT_ID()');
+    const userId = result[0]['LAST_INSERT_ID()'];
+
+    res.json({
+      user: {
+        id: userId,
+        identifier,
+        name,
+        userType
+      },
+      userType
+    });
+  } catch (error) {
+    console.error('Registration error:', error);
+    res.status(500).json({ error: 'Registration failed' });
+  }
+});
+
 // Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
