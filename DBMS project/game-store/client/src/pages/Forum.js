@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Container,
   Typography,
@@ -12,16 +12,27 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Rating,
   Box,
   CircularProgress,
-  MenuItem,
-  Select,
+  Alert,
   FormControl,
   InputLabel,
-  Divider
+  Select,
+  MenuItem
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+
+// Color palette with faint shades
+const COLORS = [
+  '#fff3cd', // light yellow
+  '#e3f2fd', // light blue
+  '#f8bbd0', // light pink
+  '#e8f5e9', // light green
+  '#e0f7fa', // light cyan
+  '#fff8e1', // light orange
+  '#f3e5f5', // light purple
+  '#f5f5f5', // light gray
+];
 
 const Forum = () => {
   const navigate = useNavigate();
@@ -33,21 +44,25 @@ const Forum = () => {
     type: 'Customer',
     description: ''
   });
+  const [error, setError] = useState(null);
 
-  useEffect(() => {
-    fetchForums();
+  // Get a random color from the palette
+  const getRandomColor = useMemo(() => {
+    return () => COLORS[Math.floor(Math.random() * COLORS.length)];
   }, []);
 
   const fetchForums = async () => {
     try {
       const response = await fetch('http://localhost:5000/api/forums');
       if (!response.ok) {
-        throw new Error('Failed to fetch forums');
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to fetch forums');
       }
       const data = await response.json();
       setForums(data);
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error fetching forums:', error);
+      setError('Failed to fetch forums. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -64,108 +79,109 @@ const Forum = () => {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create post');
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to create post');
       }
 
       const data = await response.json();
-      setForums(prevForums => [data.forum, ...prevForums]);
+      setForums([data, ...forums]);
       setOpenDialog(false);
       setNewPost({ title: '', type: 'Customer', description: '' });
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error creating post:', error);
+      setError('Failed to create forum post. Please try again.');
     }
   };
 
-  const handleRatingChange = async (forumId, newValue) => {
-    try {
-      const response = await fetch(`http://localhost:5000/api/forums/${forumId}/rating`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ rating: newValue }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update rating');
-      }
-
-      const data = await response.json();
-      setForums(prevForums => 
-        prevForums.map(forum => 
-          forum.Forum_ID === forumId ? data.forum : forum
-        )
-      );
-    } catch (error) {
-      console.error('Error:', error);
-    }
-  };
-
-  if (loading) {
-    return (
-      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
-          <CircularProgress />
-        </Box>
-      </Container>
-    );
-  }
+  useEffect(() => {
+    fetchForums();
+  }, []);
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
-        <Typography variant="h4" gutterBottom>
-          Gaming Forums
-        </Typography>
-        <Button variant="contained" color="primary" onClick={() => setOpenDialog(true)}>
-          Create New Post
-        </Button>
-      </Box>
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
 
-      <Grid container spacing={3}>
-        {forums.map((forum) => (
-          <Grid item xs={12} md={6} key={forum.Forum_ID}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  {forum.Title}
-                </Typography>
-                <Typography variant="body2" color="text.secondary" gutterBottom>
-                  Posted by: {forum.Type}
-                </Typography>
-                <Divider sx={{ my: 1 }} />
-                <Typography variant="body1" paragraph>
-                  {forum.Description}
-                </Typography>
-                <Box display="flex" alignItems="center" gap={1}>
-                  <Typography component="legend">Rating:</Typography>
-                  <Rating
-                    value={forum.Rating || 0}
-                    precision={0.5}
-                    onChange={(event, newValue) => handleRatingChange(forum.Forum_ID, newValue)}
-                  />
-                  <Typography variant="body2" color="text.secondary">
-                    ({forum.Rating ? forum.Rating.toFixed(1) : '0.0'})
-                  </Typography>
-                </Box>
-              </CardContent>
-              <CardActions>
-                <Typography variant="body2" color="text.secondary">
-                  Analytics: {forum.Analytics}
-                </Typography>
-                {forum.Upvote_Downvote_Ratio > 0 && (
-                  <Typography variant="body2" color="text.secondary" sx={{ ml: 2 }}>
-                    Ratio: {forum.Upvote_Downvote_Ratio.toFixed(2)}
-                  </Typography>
-                )}
-              </CardActions>
-            </Card>
+      {loading ? (
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
+          <CircularProgress />
+        </Box>
+      ) : (
+        <>
+          <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
+            <Typography variant="h4" gutterBottom>
+              Gaming Forums
+            </Typography>
+            <Button variant="contained" color="primary" onClick={() => setOpenDialog(true)}>
+              Create New Post
+            </Button>
+          </Box>
+
+          <Grid container spacing={3}>
+            {forums.length > 0 ? (
+              forums.map((forum) => (
+                <Grid item xs={12} md={6} key={forum.Forum_ID}>
+                  <Card sx={{ 
+                    backgroundColor: getRandomColor(),
+                    position: 'relative',
+                    transition: 'transform 0.2s ease-in-out',
+                    '&:hover': {
+                      transform: 'translateY(-2px)',
+                      boxShadow: 4
+                    }
+                  }}>
+                    {/* Dark overlay for better text visibility */}
+                    <Box 
+                      sx={{ 
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                        zIndex: 0
+                      }}
+                    />
+                    <CardContent sx={{ position: 'relative', zIndex: 1 }}>
+                      <Typography variant="h6" gutterBottom sx={{ color: '#ffffff' }}>
+                        {forum.Title}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" gutterBottom sx={{ color: '#ffffff' }}>
+                        Type: {forum.Type}
+                      </Typography>
+                      <Typography variant="body1" paragraph sx={{ color: '#ffffff' }}>
+                        {forum.Description}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ color: '#ffffff' }}>
+                        Analytics: {forum.Analytics}
+                      </Typography>
+                    </CardContent>
+                    <CardActions sx={{ position: 'relative', zIndex: 1 }}>
+                      <Button 
+                        size="small" 
+                        onClick={() => navigate(`/forum/${forum.Forum_ID}`)}
+                        sx={{ color: '#ffffff' }}
+                      >
+                        View Details
+                      </Button>
+                    </CardActions>
+                  </Card>
+                </Grid>
+              ))
+            ) : (
+              <Typography variant="body1" align="center" color="text.secondary">
+                No forums found. Create a new forum to start the discussion!
+              </Typography>
+            )}
           </Grid>
-        ))}
-      </Grid>
+        </>
+      )}
 
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="sm" fullWidth>
-        <DialogTitle>Create New Forum Post</DialogTitle>
+        <DialogTitle>Create New Forum</DialogTitle>
         <DialogContent>
           <Box sx={{ mt: 2 }}>
             <TextField
@@ -174,13 +190,15 @@ const Forum = () => {
               value={newPost.title}
               onChange={(e) => setNewPost({ ...newPost, title: e.target.value })}
               margin="normal"
+              required
             />
             <FormControl fullWidth margin="normal">
               <InputLabel>Type</InputLabel>
               <Select
                 value={newPost.type}
-                label="Type"
                 onChange={(e) => setNewPost({ ...newPost, type: e.target.value })}
+                label="Type"
+                required
               >
                 <MenuItem value="Customer">Customer</MenuItem>
                 <MenuItem value="Publisher">Publisher</MenuItem>
@@ -194,6 +212,7 @@ const Forum = () => {
               margin="normal"
               multiline
               rows={4}
+              required
             />
           </Box>
         </DialogContent>
@@ -202,9 +221,9 @@ const Forum = () => {
           <Button 
             onClick={handleCreatePost}
             variant="contained"
-            disabled={!newPost.title || !newPost.description}
+            disabled={!newPost.title || !newPost.type || !newPost.description}
           >
-            Create Post
+            Create Forum
           </Button>
         </DialogActions>
       </Dialog>

@@ -21,6 +21,7 @@ import Orders from './pages/Orders';
 import Query from './pages/Query';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import Forum from './pages/Forum';
 
 // Theme
 const theme = createTheme({
@@ -38,7 +39,7 @@ const theme = createTheme({
     },
   },
   typography: {
-    fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
+    fontFamily: '"Bungee", "Roboto", "Helvetica", "Arial", sans-serif',
     h1: {
       fontFamily: '"Press Start 2P", cursive',
       fontSize: '2.5rem',
@@ -50,20 +51,49 @@ const theme = createTheme({
       }
     },
     h2: {
+      fontFamily: '"Press Start 2P", cursive',
       fontSize: '2rem',
       fontWeight: 500,
       color: '#ffffff',
     },
     h3: {
+      fontFamily: '"Press Start 2P", cursive',
       fontSize: '1.75rem',
       fontWeight: 500,
       color: '#ffffff',
     },
+    h4: {
+      fontFamily: '"Press Start 2P", cursive',
+      fontSize: '1.5rem',
+      fontWeight: 500,
+      color: '#ffffff',
+    },
+    h5: {
+      fontFamily: '"Press Start 2P", cursive',
+      fontSize: '1.25rem',
+      fontWeight: 500,
+      color: '#ffffff',
+    },
+    h6: {
+      fontFamily: '"Press Start 2P", cursive',
+      fontSize: '1rem',
+      fontWeight: 500,
+      color: '#ffffff',
+    },
     body1: {
+      fontFamily: '"Bungee", "Roboto", "Helvetica", "Arial", sans-serif',
       color: '#ffffff',
     },
     body2: {
+      fontFamily: '"Bungee", "Roboto", "Helvetica", "Arial", sans-serif',
       color: '#b3b3b3',
+    },
+    button: {
+      fontFamily: '"Bungee", "Roboto", "Helvetica", "Arial", sans-serif',
+      textTransform: 'none',
+    },
+    caption: {
+      fontFamily: '"Bungee", "Roboto", "Helvetica", "Arial", sans-serif',
     },
   },
   components: {
@@ -95,9 +125,15 @@ const theme = createTheme({
   },
 });
 
+// Add Google Fonts
+const fontStyles = `
+  @import url('https://fonts.googleapis.com/css2?family=Bungee&family=Press+Start+2P&display=swap');
+`;
+
 const App = () => {
   return (
     <ThemeProvider theme={theme}>
+      <style>{fontStyles}</style>
       <CssBaseline />
       <AuthProvider>
         <CartProvider>
@@ -116,6 +152,7 @@ const App = () => {
               <Route path="/query" element={<Query />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
+              <Route path="/forum" element={<Forum />} />
             </Routes>
           </Router>
         </CartProvider>

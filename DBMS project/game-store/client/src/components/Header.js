@@ -28,7 +28,8 @@ import {
   ShoppingCart as CartIcon,
   Person as PersonIcon,
   Login as LoginIcon,
-  Logout as LogoutIcon
+  Logout as LogoutIcon,
+  Forum as ForumIcon
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -63,6 +64,7 @@ const Header = () => {
   const menuItems = [
     { text: 'Dashboard', icon: <HomeIcon />, path: '/' },
     { text: 'Games', icon: <GamesIcon />, path: '/games' },
+    { text: 'Forum', icon: <ForumIcon />, path: '/forum' },
     { text: 'Cart', icon: <CartIcon />, path: '/cart' }
   ];
 

@@ -23,6 +23,37 @@ const pool = mysql.createPool({
   queueLimit: 0
 });
 
+// Initialize database tables
+async function initializeDatabase() {
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS Forum (
+        Forum_ID INT PRIMARY KEY AUTO_INCREMENT,
+        Title VARCHAR(255) NOT NULL,
+        Type VARCHAR(50) NOT NULL,
+        Description TEXT NOT NULL,
+        Created_At TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS Forum_Rating (
+        Rating_ID INT PRIMARY KEY AUTO_INCREMENT,
+        Forum_ID INT NOT NULL,
+        Rating INT NOT NULL,
+        FOREIGN KEY (Forum_ID) REFERENCES Forum(Forum_ID)
+      )
+    `);
+
+    console.log('Forum tables initialized successfully');
+  } catch (error) {
+    console.error('Error initializing forum tables:', error);
+  }
+}
+
+// Initialize database when server starts
+initializeDatabase();
+
 // Test database connection
 app.get('/api/test', async (req, res) => {
   try {
@@ -319,6 +350,84 @@ app.post('/api/auth/register', async (req, res) => {
   } catch (error) {
     console.error('Registration error:', error);
     res.status(500).json({ error: 'Registration failed' });
+  }
+});
+
+// Get all forums
+app.get('/api/forums', async (req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM Forum ORDER BY Forum_ID DESC');
+    res.json(rows);
+  } catch (error) {
+    console.error('Error fetching forums:', error);
+    res.status(500).json({ error: 'Failed to fetch forums' });
+  }
+});
+
+// Create new forum post
+app.post('/api/forums', async (req, res) => {
+  try {
+    const { title, type, description } = req.body;
+    
+    // Validate input
+    if (!title || !type || !description) {
+      return res.status(400).json({ error: 'All fields are required' });
+    }
+
+    const [result] = await pool.query(
+      'INSERT INTO Forum (Title, Type, Description) VALUES (?, ?, ?)',
+      [title, type, description]
+    );
+
+    // Get the newly created forum
+    const [newForum] = await pool.query(
+      'SELECT * FROM Forum WHERE Forum_ID = ?',
+      [result.insertId]
+    );
+
+    res.json(newForum[0]);
+  } catch (error) {
+    console.error('Error creating forum:', error);
+    res.status(500).json({ error: 'Failed to create forum' });
+  }
+});
+
+// Update forum rating
+app.patch('/api/forums/:forumId/rating', async (req, res) => {
+  try {
+    const { rating } = req.body;
+    const { forumId } = req.params;
+    
+    // First, check if rating exists for this user
+    const [existingRating] = await pool.query(
+      'SELECT * FROM Forum_Rating WHERE Forum_ID = ?',
+      [forumId]
+    );
+
+    if (existingRating.length > 0) {
+      // Update existing rating
+      await pool.query(
+        'UPDATE Forum_Rating SET Rating = ? WHERE Forum_ID = ?',
+        [rating, forumId]
+      );
+    } else {
+      // Create new rating
+      await pool.query(
+        'INSERT INTO Forum_Rating (Forum_ID, Rating) VALUES (?, ?)',
+        [forumId, rating]
+      );
+    }
+
+    // Get updated forum with new average rating
+    const [updatedForum] = await pool.query(
+      'SELECT f.*, AVG(r.Rating) as average_rating FROM Forum f LEFT JOIN Forum_Rating r ON f.Forum_ID = r.Forum_ID WHERE f.Forum_ID = ? GROUP BY f.Forum_ID',
+      [forumId]
+    );
+
+    res.json({ forum: updatedForum[0] });
+  } catch (error) {
+    console.error('Error updating forum rating:', error);
+    res.status(500).json({ error: 'Failed to update forum rating' });
   }
 });
 
