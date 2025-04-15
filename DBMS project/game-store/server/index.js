@@ -688,6 +688,25 @@ app.patch('/api/forums/:forumId/rating', async (req, res) => {
   }
 });
 
+// Add this endpoint after your existing routes
+app.get('/api/run-query', async (req, res) => {
+  const queryNumber = req.query.number;
+  
+  try {
+    // Read query from queries.sql
+    const queries = fs.readFileSync('queries.sql', 'utf8').split(';');
+    const query = queries[queryNumber - 1].trim();
+    
+    if (!query) throw new Error('Invalid query number');
+    
+    const [results] = await connection.query(query);
+    res.json(results);
+    
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {

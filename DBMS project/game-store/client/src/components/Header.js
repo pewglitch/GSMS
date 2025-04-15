@@ -65,6 +65,7 @@ const Header = () => {
     { text: 'Dashboard', icon: <HomeIcon />, path: '/' },
     { text: 'Games', icon: <GamesIcon />, path: '/games' },
     { text: 'Top Games', icon: <GamesIcon />, path: '/top-games' },
+    { text: 'Query', icon: <HomeIcon />, path: '/query' },
     { text: 'Forum', icon: <ForumIcon />, path: '/forum' },
     { text: 'Cart', icon: <CartIcon />, path: '/cart' }
   ];
