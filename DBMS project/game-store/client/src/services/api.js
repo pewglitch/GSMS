@@ -79,6 +79,28 @@ export const addGameToCart = async (cartId, gameId, quantity) => {
   }
 };
 
+export const removeGameFromCart = async (cartId, gameId) => {
+  try {
+    const response = await axios.delete(`${API_URL}/carts/${cartId}/remove/${gameId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error removing game from cart:', error);
+    throw error;
+  }
+};
+
+export const updateGameQuantity = async (cartId, gameId, quantity) => {
+  try {
+    const response = await axios.put(`${API_URL}/carts/${cartId}/update/${gameId}`, {
+      quantity,
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error updating game quantity in cart:', error);
+    throw error;
+  }
+};
+
 // Orders
 export const getCustomerOrders = async (customerId) => {
   try {

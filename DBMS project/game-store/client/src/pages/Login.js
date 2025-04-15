@@ -5,44 +5,40 @@ import {
   Typography,
   TextField,
   Button,
-  FormControl,
-  FormControlLabel,
-  RadioGroup,
-  Radio,
   Box,
   Alert,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
-  const [identifier, setIdentifier] = useState('');
-  const [userType, setUserType] = useState('customer');
+  const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch('http://localhost:5000/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ identifier, userType }),
+        body: JSON.stringify({ email }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Login failed');
+        throw new Error(data.message || 'Login failed');
       }
 
-      // Store user data in localStorage
-      localStorage.setItem('user', JSON.stringify(data.user));
-      localStorage.setItem('userType', data.userType);
+      // Login the user and store their data
+      login(data.customer, 'customer');
 
-      // Redirect based on user type
-      navigate(userType === 'publisher' ? '/publisher-dashboard' : '/games');
+      // Redirect to games page
+      navigate('/games');
     } catch (error) {
       setError(error.message);
     }
@@ -63,31 +59,12 @@ export default function Login() {
           )}
 
           <form onSubmit={handleSubmit}>
-            <FormControl fullWidth sx={{ mb: 2 }}>
-              <RadioGroup
-                row
-                value={userType}
-                onChange={(e) => setUserType(e.target.value)}
-              >
-                <FormControlLabel
-                  value="customer"
-                  control={<Radio />}
-                  label="Customer"
-                />
-                <FormControlLabel
-                  value="publisher"
-                  control={<Radio />}
-                  label="Publisher"
-                />
-              </RadioGroup>
-            </FormControl>
-
             <TextField
               fullWidth
-              label={userType === 'publisher' ? 'License Number' : 'Billing Email'}
-              type={userType === 'publisher' ? 'text' : 'email'}
-              value={identifier}
-              onChange={(e) => setIdentifier(e.target.value)}
+              label="Billing Email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               required
               sx={{ mb: 2 }}
             />
