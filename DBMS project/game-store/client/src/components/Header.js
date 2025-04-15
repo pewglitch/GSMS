@@ -64,6 +64,7 @@ const Header = () => {
   const menuItems = [
     { text: 'Dashboard', icon: <HomeIcon />, path: '/' },
     { text: 'Games', icon: <GamesIcon />, path: '/games' },
+    { text: 'Top Games', icon: <GamesIcon />, path: '/top-games' },
     { text: 'Forum', icon: <ForumIcon />, path: '/forum' },
     { text: 'Cart', icon: <CartIcon />, path: '/cart' }
   ];
@@ -192,29 +193,40 @@ const Header = () => {
               gap: 2,
               alignItems: 'center'
             }}>
-              {menuItems.map((item) => (
-                <Button
-                  key={item.text}
-                  component="a"
-                  href={item.path}
-                  startIcon={item.icon}
-                  sx={{
-                    my: 2,
-                    color: 'white',
-                    display: 'block',
-                    fontSize: '1.2rem',
-                    fontWeight: 700,
-                    fontFamily: '"Bungee", cursive',
-                    textTransform: 'uppercase',
-                    px: 2,
-                    '&:hover': {
-                      backgroundColor: theme.palette.action.hover
-                    }
-                  }}
-                >
-                  {item.text}
-                </Button>
-              ))}
+              {menuItems.map((item) => {
+  const isTopGames = item.path === '/top-games';
+  const isActive = location.pathname === item.path;
+  return (
+    <Button
+      key={item.text}
+      component="a"
+      href={item.path}
+      startIcon={item.icon}
+      sx={{
+        my: 2,
+        color: isTopGames ? (isActive ? '#FFD700' : '#FFB300') : (isActive ? '#90caf9' : 'white'),
+        backgroundColor: isTopGames && isActive ? '#333333' : 'transparent',
+        border: isTopGames ? '2px solid #FFD700' : 'none',
+        borderRadius: isTopGames ? 2 : 0,
+        display: 'block',
+        fontSize: '1.2rem',
+        fontWeight: 700,
+        fontFamily: '"Bungee", cursive',
+        textTransform: 'uppercase',
+        px: 2,
+        transition: 'all 0.2s',
+        '&:hover': {
+          backgroundColor: isTopGames ? '#FFD700' : theme.palette.action.hover,
+          color: isTopGames ? '#222' : '#fff',
+          border: isTopGames ? '2px solid #FFD700' : 'none',
+        },
+        boxShadow: isTopGames && isActive ? '0 2px 8px #FFD70055' : 'none',
+      }}
+    >
+      {item.text}
+    </Button>
+  );
+})}
               {userType === 'admin' && adminMenuItems.map((item) => (
                 <Button
                   key={item.text}

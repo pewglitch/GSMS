@@ -22,6 +22,7 @@ import Query from './pages/Query';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Forum from './pages/Forum';
+import TopGames from './pages/TopGames';
 
 // Theme
 const theme = createTheme({
@@ -153,6 +154,7 @@ const App = () => {
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route path="/forum" element={<Forum />} />
+               <Route path="/top-games" element={<TopGames />} />
             </Routes>
           </Router>
         </CartProvider>

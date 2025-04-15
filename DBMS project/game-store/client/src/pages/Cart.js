@@ -42,14 +42,14 @@ const Cart = () => {
   };
 
   const increaseQuantity = (gameId) => {
-    const currentItem = cartItems.find(item => item.Game_ID === gameId);
+    const currentItem = cartItems.find(item => item.gameId === gameId);
     if (currentItem) {
       updateQuantity(gameId, currentItem.quantity + 1);
     }
   };
 
   const decreaseQuantity = (gameId) => {
-    const currentItem = cartItems.find(item => item.Game_ID === gameId);
+    const currentItem = cartItems.find(item => item.gameId === gameId);
     if (currentItem && currentItem.quantity > 1) {
       updateQuantity(gameId, currentItem.quantity - 1);
     }
@@ -134,7 +134,7 @@ const Cart = () => {
                     const subtotal = Number(item.Price) * item.quantity;
                     
                     return (
-                      <TableRow key={item.Game_ID}>
+                      <TableRow key={item.gameId}>
                         <TableCell>
                           <Typography variant="subtitle1">{item.Title}</Typography>
                         </TableCell>
@@ -145,7 +145,7 @@ const Cart = () => {
                           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             <IconButton 
                               size="small" 
-                              onClick={() => decreaseQuantity(item.Game_ID)}
+                              onClick={() => decreaseQuantity(item.gameId)}
                               disabled={item.quantity <= 1}
                             >
                               <RemoveIcon fontSize="small" />
@@ -153,7 +153,7 @@ const Cart = () => {
                             <TextField
                               size="small"
                               value={item.quantity}
-                              onChange={(e) => handleQuantityChange(item.Game_ID, e.target.value)}
+                              onChange={(e) => handleQuantityChange(item.gameId, e.target.value)}
                               sx={{ width: '60px', mx: 1 }}
                               inputProps={{ 
                                 min: 1, 
@@ -162,7 +162,7 @@ const Cart = () => {
                             />
                             <IconButton 
                               size="small" 
-                              onClick={() => increaseQuantity(item.Game_ID)}
+                              onClick={() => increaseQuantity(item.gameId)}
                             >
                               <AddIcon fontSize="small" />
                             </IconButton>
@@ -174,7 +174,7 @@ const Cart = () => {
                         <TableCell align="center">
                           <IconButton 
                             color="error" 
-                            onClick={() => handleRemoveItem(item.Game_ID)}
+                            onClick={() => handleRemoveItem(item.gameId)}
                           >
                             <DeleteIcon />
                           </IconButton>

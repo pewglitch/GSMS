@@ -56,21 +56,22 @@ export const getPublishers = async () => {
 };
 
 // Cart
-export const getCustomerCart = async (customerId) => {
+export const getCustomerCart = async (cartId) => {
   try {
-    const response = await axios.get(`${API_URL}/carts/${customerId}`);
+    const response = await axios.get(`${API_URL}/cart/${cartId}`);
     return response.data;
   } catch (error) {
-    console.error(`Error fetching cart for customer ${customerId}:`, error);
+    console.error(`Error fetching cart:`, error);
     throw error;
   }
 };
 
 export const addGameToCart = async (cartId, gameId, quantity) => {
   try {
-    const response = await axios.post(`${API_URL}/carts/${cartId}/add`, {
+    const response = await axios.post(`${API_URL}/cart/add`, {
+      cartId,
       gameId,
-      quantity,
+      quantity
     });
     return response.data;
   } catch (error) {
@@ -81,7 +82,10 @@ export const addGameToCart = async (cartId, gameId, quantity) => {
 
 export const removeGameFromCart = async (cartId, gameId) => {
   try {
-    const response = await axios.delete(`${API_URL}/carts/${cartId}/remove/${gameId}`);
+    const response = await axios.post(`${API_URL}/cart/remove`, {
+      cartId,
+      gameId
+    });
     return response.data;
   } catch (error) {
     console.error('Error removing game from cart:', error);
@@ -91,12 +95,14 @@ export const removeGameFromCart = async (cartId, gameId) => {
 
 export const updateGameQuantity = async (cartId, gameId, quantity) => {
   try {
-    const response = await axios.put(`${API_URL}/carts/${cartId}/update/${gameId}`, {
-      quantity,
+    const response = await axios.post(`${API_URL}/cart/update`, {
+      cartId,
+      gameId,
+      quantity
     });
     return response.data;
   } catch (error) {
-    console.error('Error updating game quantity in cart:', error);
+    console.error('Error updating game quantity:', error);
     throw error;
   }
 };

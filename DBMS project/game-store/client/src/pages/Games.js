@@ -23,9 +23,11 @@ import {
 } from '@mui/material';
 import { getGames } from '../services/api';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 
 const Games = () => {
   const { addToCart } = useCart();
+  const { user } = useAuth();
   const [games, setGames] = useState([]);
   const [filteredGames, setFilteredGames] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -128,12 +130,28 @@ const Games = () => {
     return genreColors[genre] || '9E9E9E';
   };
 
-  const handleAddToCart = (game) => {
-    addToCart(game);
-    setSnackbar({
-      open: true,
-      message: `${game.Title} added to cart!`
-    });
+  const handleAddToCart = async (game) => {
+    if (!user || !user.cartId) {
+      setSnackbar({
+        open: true,
+        message: 'Please log in to add items to cart'
+      });
+      return;
+    }
+
+    try {
+      await addToCart(game);
+      setSnackbar({
+        open: true,
+        message: `${game.Title} added to cart!`
+      });
+    } catch (error) {
+      console.error('Error adding to cart:', error);
+      setSnackbar({
+        open: true,
+        message: 'Failed to add item to cart. Please try again.'
+      });
+    }
   };
 
   const handleCloseSnackbar = () => {

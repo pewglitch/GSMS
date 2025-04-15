@@ -54,6 +54,237 @@ async function initializeDatabase() {
 // Initialize database when server starts
 initializeDatabase();
 
+// Top Games endpoint
+app.get('/api/top-games', async (req, res) => {
+  try {
+    const [rows] = await pool.query(`
+      SELECT g.Game_ID, g.Title, SUM(cg.Quantity) AS total_purchased
+      FROM Cart_Game cg
+      JOIN Game g ON cg.Game_ID = g.Game_ID
+      GROUP BY g.Game_ID, g.Title
+      ORDER BY total_purchased DESC
+    `);
+    res.json(rows);
+  } catch (error) {
+    console.error('Error fetching top games:', error);
+    res.status(500).json({ error: 'Failed to fetch top games' });
+  }
+});
+
+// Cart endpoints
+app.post('/api/cart/add', async (req, res) => {
+  try {
+    const { cartId, gameId, quantity } = req.body;
+    
+    // Check if item already exists in cart
+    const [existing] = await pool.query(
+      'SELECT * FROM Cart_Game WHERE Cart_ID = ? AND Game_ID = ?',
+      [cartId, gameId]
+    );
+
+    if (existing.length > 0) {
+      // Update quantity if item exists
+      await pool.query(
+        'UPDATE Cart_Game SET Quantity = ? WHERE Cart_ID = ? AND Game_ID = ?',
+        [quantity, cartId, gameId]
+      );
+    } else {
+      // Insert new item
+      await pool.query(
+        'INSERT INTO Cart_Game (Cart_ID, Game_ID, Quantity) VALUES (?, ?, ?)',
+        [cartId, gameId, quantity]
+      );
+    }
+
+    // Get game price
+    const [game] = await pool.query(
+      'SELECT Price FROM Game WHERE Game_ID = ?',
+      [gameId]
+    );
+
+    // Get current cart total
+    const [cart] = await pool.query(
+      'SELECT Total FROM Cart WHERE Cart_ID = ?',
+      [cartId]
+    );
+
+    // Always parse as float
+    const cartTotal = parseFloat(cart[0].Total) || 0;
+    const gamePrice = parseFloat(game[0].Price) || 0;
+    const addAmount = gamePrice * quantity;
+    const newTotal = parseFloat((cartTotal + addAmount).toFixed(2));
+
+    // Update cart total
+    await pool.query(
+      'UPDATE Cart SET Total = ? WHERE Cart_ID = ?',
+      [newTotal, cartId]
+    );
+
+    res.json({ 
+      success: true, 
+      message: 'Game added to cart',
+      cart: {
+        total: newTotal
+      }
+    });
+  } catch (error) {
+    console.error('Error adding game to cart:', error);
+    res.status(500).json({ error: 'Failed to add game to cart' });
+  }
+});
+
+app.post('/api/cart/remove', async (req, res) => {
+  try {
+    const { cartId, gameId } = req.body;
+    
+    // Get current quantity and price
+    const [cartGame] = await pool.query(
+      'SELECT Quantity FROM Cart_Game WHERE Cart_ID = ? AND Game_ID = ?',
+      [cartId, gameId]
+    );
+
+    if (cartGame.length === 0) {
+      return res.status(404).json({ error: 'Game not found in cart' });
+    }
+
+    const [game] = await pool.query(
+      'SELECT Price FROM Game WHERE Game_ID = ?',
+      [gameId]
+    );
+
+    const [cart] = await pool.query(
+      'SELECT Total FROM Cart WHERE Cart_ID = ?',
+      [cartId]
+    );
+
+    // Always parse as float
+    const cartTotal = parseFloat(cart[0].Total) || 0;
+    const gamePrice = parseFloat(game[0].Price) || 0;
+    const removeAmount = gamePrice * cartGame[0].Quantity;
+    // Never allow negative total
+    const newTotal = Math.max(0, parseFloat((cartTotal - removeAmount).toFixed(2)));
+
+    // Update cart total
+    await pool.query(
+      'UPDATE Cart SET Total = ? WHERE Cart_ID = ?',
+      [newTotal, cartId]
+    );
+
+    // Remove from Cart_Game
+    await pool.query(
+      'DELETE FROM Cart_Game WHERE Cart_ID = ? AND Game_ID = ?',
+      [cartId, gameId]
+    );
+
+    res.json({ 
+      success: true, 
+      message: 'Game removed from cart',
+      cart: {
+        total: newTotal
+      }
+    });
+  } catch (error) {
+    console.error('Error removing game from cart:', error);
+    res.status(500).json({ error: 'Failed to remove game from cart' });
+  }
+});
+
+app.post('/api/cart/update', async (req, res) => {
+  try {
+    const { cartId, gameId, quantity } = req.body;
+    
+    // Get current price
+    const [game] = await pool.query(
+      'SELECT Price FROM Game WHERE Game_ID = ?',
+      [gameId]
+    );
+
+    // Get current quantity
+    const [cartGame] = await pool.query(
+      'SELECT Quantity FROM Cart_Game WHERE Cart_ID = ? AND Game_ID = ?',
+      [cartId, gameId]
+    );
+
+    if (cartGame.length === 0) {
+      return res.status(404).json({ error: 'Game not found in cart' });
+    }
+
+    const [cart] = await pool.query(
+      'SELECT Total FROM Cart WHERE Cart_ID = ?',
+      [cartId]
+    );
+
+    // Always parse as float
+    const cartTotal = parseFloat(cart[0].Total) || 0;
+    const gamePrice = parseFloat(game[0].Price) || 0;
+    const oldAmount = gamePrice * cartGame[0].Quantity;
+    const newAmount = gamePrice * quantity;
+    const priceDiff = newAmount - oldAmount;
+    const newTotal = Math.max(0, parseFloat((cartTotal + priceDiff).toFixed(2)));
+
+    // Update Cart_Game
+    await pool.query(
+      'UPDATE Cart_Game SET Quantity = ? WHERE Cart_ID = ? AND Game_ID = ?',
+      [quantity, cartId, gameId]
+    );
+
+    // Update Cart total
+    await pool.query(
+      'UPDATE Cart SET Total = ? WHERE Cart_ID = ?',
+      [newTotal, cartId]
+    );
+
+    res.json({ 
+      success: true, 
+      message: 'Cart updated successfully',
+      cart: {
+        total: newTotal
+      }
+    });
+  } catch (error) {
+    console.error('Error updating cart:', error);
+    res.status(500).json({ error: 'Failed to update cart' });
+  }
+});
+
+app.get('/api/cart/:cartId', async (req, res) => {
+  try {
+    const { cartId } = req.params;
+    
+    // Get cart items
+    const [items] = await pool.query(
+      'SELECT g.Game_ID, g.Title, g.Price, cg.Quantity, (g.Price * cg.Quantity) as Total_Price ' +
+      'FROM Cart_Game cg ' +
+      'JOIN Game g ON cg.Game_ID = g.Game_ID ' +
+      'WHERE cg.Cart_ID = ?',
+      [cartId]
+    );
+
+    // Get cart total
+    const [cart] = await pool.query(
+      'SELECT Total FROM Cart WHERE Cart_ID = ?',
+      [cartId]
+    );
+
+    // Format items to match frontend expectations
+    const formattedItems = items.map(item => ({
+      gameId: item.Game_ID,
+      title: item.Title,
+      price: item.Price,
+      quantity: item.Quantity,
+      total: item.Total_Price
+    }));
+
+    res.json({ 
+      items: formattedItems,
+      total: cart[0]?.Total || 0
+    });
+  } catch (error) {
+    console.error('Error fetching cart:', error);
+    res.status(500).json({ error: 'Failed to fetch cart' });
+  }
+});
+
 // Test database connection
 app.get('/api/test', async (req, res) => {
   try {
@@ -266,40 +497,72 @@ app.post('/api/query', async (req, res) => {
 // Login endpoint
 app.post('/api/auth/login', async (req, res) => {
   try {
-    const { identifier, userType } = req.body;
-    
+    const { userType, Billing_Email, License_Number } = req.body;
     let query = '';
     let params = [];
-    
+
     if (userType === 'customer') {
+      if (!Billing_Email) {
+        return res.status(400).json({ error: 'Billing_Email is required for customer login' });
+      }
       query = 'SELECT * FROM Customer WHERE Billing_Email = ?';
-      params = [identifier];
-    } else {
+      params = [Billing_Email];
+    } else if (userType === 'publisher') {
+      if (!License_Number) {
+        return res.status(400).json({ error: 'License_Number is required for publisher login' });
+      }
       query = 'SELECT * FROM Publisher WHERE License_Number = ?';
-      params = [identifier];
+      params = [License_Number];
+    } else {
+      return res.status(400).json({ error: 'Invalid user type' });
     }
 
     const [rows] = await pool.query(query, params);
-    
+
     if (rows.length === 0) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     const user = rows[0];
-    const userTypeData = userType === 'customer' ? {
-      customer_id: user.Customer_ID,
-      name: user.Name,
-      email: user.Billing_Email,
-      payment_method: user.Payment_Method
-    } : {
-      publisher_id: user.Publisher_ID,
-      license_number: user.License_Number,
-      type: user.Type
-    };
+    let userTypeData;
+    let cartInfo = null;
+
+    if (userType === 'customer') {
+      // 1. Check if a cart exists for this customer
+      const [cartRows] = await pool.query('SELECT * FROM Cart WHERE Customer_ID = ?', [user.Customer_ID]);
+      let cartId;
+      if (cartRows.length === 0) {
+        // 2. If not, create a new cart
+        const [cartResult] = await pool.query('INSERT INTO Cart (Customer_ID, Total) VALUES (?, 0)', [user.Customer_ID]);
+        cartId = cartResult.insertId;
+      } else {
+        cartId = cartRows[0].Cart_ID;
+      }
+      // 3. Ensure entry in Customer_Cart
+      const [ccRows] = await pool.query('SELECT * FROM Customer_Cart WHERE Customer_ID = ? AND Cart_ID = ?', [user.Customer_ID, cartId]);
+      if (ccRows.length === 0) {
+        await pool.query('INSERT INTO Customer_Cart (Customer_ID, Cart_ID) VALUES (?, ?)', [user.Customer_ID, cartId]);
+      }
+      userTypeData = {
+        customer_id: user.Customer_ID,
+        name: user.Name,
+        email: user.Billing_Email,
+        payment_method: user.Payment_Method,
+        cart_id: cartId
+      };
+      cartInfo = { cart_id: cartId };
+    } else {
+      userTypeData = {
+        publisher_id: user.Publisher_ID,
+        license_number: user.License_Number,
+        type: user.Type
+      };
+    }
 
     res.json({
       user: userTypeData,
-      userType: userType
+      userType: userType,
+      cart: cartInfo
     });
   } catch (error) {
     console.error('Login error:', error);
@@ -310,43 +573,37 @@ app.post('/api/auth/login', async (req, res) => {
 // Register endpoint
 app.post('/api/auth/register', async (req, res) => {
   try {
-    const { identifier, userType, name, paymentMethod, type } = req.body;
-    
-    if (userType === 'customer') {
-      const [rows] = await pool.query('SELECT * FROM Customer WHERE Billing_Email = ?', [identifier]);
-      if (rows.length > 0) {
-        return res.status(400).json({ error: 'Email already registered' });
-      }
+    const { userType } = req.body;
 
+    if (userType === 'customer') 
+    {
+      const { Name, Billing_Email, Payment_Method } = req.body;
+      // Check if customer already exists
+      const [existing] = await pool.query('SELECT * FROM Customer WHERE Billing_Email = ?', [Billing_Email]);
+      if (existing.length > 0) 
+      {
+        return res.status(400).json({ error: 'Customer already registered with this email' });
+      }
       await pool.query(
         'INSERT INTO Customer (Name, Billing_Email, Payment_Method) VALUES (?, ?, ?)',
-        [name, identifier, paymentMethod]
+        [Name, Billing_Email, Payment_Method]
       );
-    } else {
-      const [rows] = await pool.query('SELECT * FROM Publisher WHERE License_Number = ?', [identifier]);
-      if (rows.length > 0) {
-        return res.status(400).json({ error: 'License number already registered' });
+      return res.json({ success: true, userType: 'customer', user: { Name, Billing_Email, Payment_Method } });
+    } else if (userType === 'publisher') {
+      const { License_Number, Type } = req.body;
+      // Check if publisher already exists
+      const [existing] = await pool.query('SELECT * FROM Publisher WHERE License_Number = ?', [License_Number]);
+      if (existing.length > 0) {
+        return res.status(400).json({ error: 'Publisher already registered with this license number' });
       }
-
       await pool.query(
         'INSERT INTO Publisher (License_Number, Type) VALUES (?, ?)',
-        [identifier, type]
+        [License_Number, Type]
       );
+      return res.json({ success: true, userType: 'publisher', user: { License_Number, Type } });
+    } else {
+      return res.status(400).json({ error: 'Invalid user type' });
     }
-
-    // Get the newly created user
-    const [result] = await pool.query('SELECT LAST_INSERT_ID()');
-    const userId = result[0]['LAST_INSERT_ID()'];
-
-    res.json({
-      user: {
-        id: userId,
-        identifier,
-        name,
-        userType
-      },
-      userType
-    });
   } catch (error) {
     console.error('Registration error:', error);
     res.status(500).json({ error: 'Registration failed' });

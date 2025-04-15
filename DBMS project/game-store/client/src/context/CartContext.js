@@ -9,16 +9,20 @@ export const CartProvider = ({ children }) => {
   const [cartTotal, setCartTotal] = useState(0);
   const { user } = useAuth();
 
-  // Fetch cart data when user logs in
+  // Fetch cart data when user logs in or cart updates
   useEffect(() => {
     const fetchCart = async () => {
-      if (user) {
+      if (user && user.cartId) {
         try {
-          const cart = await getCustomerCart(user.id);
-          setCartItems(cart.items);
-          setCartTotal(cart.total);
+          const response = await getCustomerCart(user.cartId);
+          if (response) {
+            setCartItems(response.items || []);
+            setCartTotal(Number(response.total) || 0);
+          }
         } catch (error) {
           console.error('Error fetching cart:', error);
+          setCartItems([]);
+          setCartTotal(0);
         }
       } else {
         setCartItems([]);
@@ -27,16 +31,16 @@ export const CartProvider = ({ children }) => {
     };
 
     fetchCart();
-  }, [user]);
+  }, [user, user?.cart?.total]);
 
   const addToCart = async (game) => {
-    if (!user) {
+    if (!user || !user.cartId) {
       console.error('User must be logged in to add items to cart');
       return;
     }
 
     try {
-      await addGameToCart(user.cartId, game.Game_ID, 1);
+      const response = await addGameToCart(user.cartId, game.Game_ID, 1);
       
       // Update local state
       setCartItems(prevItems => {
@@ -58,25 +62,42 @@ export const CartProvider = ({ children }) => {
         }];
       });
 
-      setCartTotal(prevTotal => prevTotal + game.Price);
+      setCartTotal(Number(response.cart?.total) || 0);
+
+      // Update user's cart in AuthContext
+      if (user.cart) {
+        setUser(prevUser => ({
+          ...prevUser,
+          cart: {
+            ...prevUser.cart,
+            total: response.cart?.total || 0,
+            items: [...prevUser.cart.items, {
+              gameId: game.Game_ID,
+              title: game.Title,
+              price: game.Price,
+              quantity: 1
+            }]
+          }
+        }));
+      }
     } catch (error) {
       console.error('Error adding to cart:', error);
     }
   };
 
   const removeFromCart = async (gameId) => {
-    if (!user) {
+    if (!user || !user.cartId) {
       console.error('User must be logged in to remove items from cart');
       return;
     }
 
     try {
-      await removeGameFromCart(user.cartId, gameId);
+      const response = await removeGameFromCart(user.cartId, gameId);
       
       // Update local state
       const itemToRemove = cartItems.find(item => item.gameId === gameId);
       if (itemToRemove) {
-        setCartTotal(prevTotal => prevTotal - (itemToRemove.price * itemToRemove.quantity));
+        setCartTotal(Number(response.cart?.total) || 0);
         setCartItems(prevItems => prevItems.filter(item => item.gameId !== gameId));
       }
     } catch (error) {
@@ -85,7 +106,7 @@ export const CartProvider = ({ children }) => {
   };
 
   const updateQuantity = async (gameId, quantity) => {
-    if (!user) {
+    if (!user || !user.cartId) {
       console.error('User must be logged in to update cart');
       return;
     }
@@ -93,13 +114,12 @@ export const CartProvider = ({ children }) => {
     if (quantity < 1) return;
 
     try {
-      await updateGameQuantity(user.cartId, gameId, quantity);
+      const response = await updateGameQuantity(user.cartId, gameId, quantity);
       
       // Update local state
       const itemToUpdate = cartItems.find(item => item.gameId === gameId);
       if (itemToUpdate) {
-        const quantityDiff = quantity - itemToUpdate.quantity;
-        setCartTotal(prevTotal => prevTotal + (itemToUpdate.price * quantityDiff));
+        setCartTotal(Number(response.cart?.total) || 0);
         
         setCartItems(prevItems =>
           prevItems.map(item =>

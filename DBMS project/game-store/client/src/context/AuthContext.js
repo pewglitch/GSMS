@@ -12,16 +12,36 @@ export const AuthProvider = ({ children }) => {
     const storedUserType = localStorage.getItem('userType');
     
     if (storedUser && storedUserType) {
-      setUser(JSON.parse(storedUser));
-      setUserType(storedUserType);
+      const userData = JSON.parse(storedUser);
+      setUser(userData);
+      setUserType(userData.userType);
     }
   }, []);
 
-  const login = (userData, type) => {
+  const login = async (userData) => {
     setUser(userData);
-    setUserType(type);
+    setUserType(userData.userType);
     localStorage.setItem('user', JSON.stringify(userData));
-    localStorage.setItem('userType', type);
+    localStorage.setItem('userType', userData.userType);
+
+    // If user is a customer, fetch their cart
+    if (userData.userType === 'customer') {
+      try {
+        const response = await getCustomerCart(userData.cartId);
+        if (response) {
+          // Update user data with cart information
+          setUser(prevUser => ({
+            ...prevUser,
+            cart: {
+              items: response.items,
+              total: response.total
+            }
+          }));
+        }
+      } catch (error) {
+        console.error('Error fetching cart:', error);
+      }
+    }
   };
 
   const logout = () => {

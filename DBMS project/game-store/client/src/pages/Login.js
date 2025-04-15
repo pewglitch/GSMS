@@ -12,31 +12,62 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
-  const [email, setEmail] = useState('');
+  const [userType, setUserType] = useState('customer');
+  const [formData, setFormData] = useState({
+    Billing_Email: '',
+    License_Number: ''
+  });
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const { login } = useAuth();
 
+  const handleUserTypeChange = (e) => {
+    setUserType(e.target.value);
+    setError('');
+    setFormData({ Billing_Email: '', License_Number: '' });
+  };
+
+  const handleChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    let payload;
+    if (userType === 'customer') {
+      payload = {
+        userType: 'customer',
+        Billing_Email: formData.Billing_Email
+      };
+    } else {
+      payload = {
+        userType: 'publisher',
+        License_Number: formData.License_Number
+      };
+    }
     try {
       const response = await fetch('http://localhost:5000/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify(payload),
       });
-
       const data = await response.json();
-
       if (!response.ok) {
-        throw new Error(data.message || 'Login failed');
+        throw new Error(data.error || 'Login failed');
       }
-
-      // Login the user and store their data
-      login(data.customer, 'customer');
-
+      
+      // Store user data and cart ID in auth context
+      login({
+        id: userType === 'customer' ? data.user.customer_id : data.user.publisher_id,
+        userType: userType,
+        cartId: data.cart?.cart_id
+      });
+      
       // Redirect to games page
       navigate('/games');
     } catch (error) {
@@ -58,23 +89,57 @@ export default function Login() {
             </Alert>
           )}
 
-          <form onSubmit={handleSubmit}>
-            <TextField
-              fullWidth
-              label="Billing Email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              sx={{ mb: 2 }}
-            />
+          {/* User Type Selection */}
+          <Box sx={{ mb: 2, textAlign: 'center' }}>
+            <Typography variant="subtitle1" sx={{ mb: 1 }}>Login as:</Typography>
+            <Button
+              variant={userType === 'customer' ? 'contained' : 'outlined'}
+              color="primary"
+              onClick={() => handleUserTypeChange({ target: { value: 'customer' } })}
+              sx={{ mr: 1 }}
+            >
+              Customer
+            </Button>
+            <Button
+              variant={userType === 'publisher' ? 'contained' : 'outlined'}
+              color="secondary"
+              onClick={() => handleUserTypeChange({ target: { value: 'publisher' } })}
+            >
+              Publisher
+            </Button>
+          </Box>
 
+          <form onSubmit={handleSubmit}>
+            {userType === 'customer' && (
+              <TextField
+                fullWidth
+                label="Billing Email"
+                name="Billing_Email"
+                type="email"
+                value={formData.Billing_Email}
+                onChange={handleChange}
+                required
+                sx={{ mb: 2 }}
+              />
+            )}
+            {userType === 'publisher' && (
+              <TextField
+                fullWidth
+                label="License Number"
+                name="License_Number"
+                value={formData.License_Number}
+                onChange={handleChange}
+                required
+                sx={{ mb: 2 }}
+              />
+            )}
             <Button
               type="submit"
               fullWidth
               variant="contained"
               color="primary"
               size="large"
+              sx={{ mt: 2 }}
             >
               Login
             </Button>
@@ -96,3 +161,4 @@ export default function Login() {
     </Container>
   );
 }
+
