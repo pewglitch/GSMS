@@ -51,10 +51,9 @@ async function initializeDatabase() {
   }
 }
 
-// Initialize database when server starts
 initializeDatabase();
 
-// Top Games endpoint
+//top games 
 app.get('/api/top-games', async (req, res) => {
   try {
     const [rows] = await pool.query(`
@@ -71,50 +70,40 @@ app.get('/api/top-games', async (req, res) => {
   }
 });
 
-// Cart endpoints
+//cart
 app.post('/api/cart/add', async (req, res) => {
   try {
     const { cartId, gameId, quantity } = req.body;
     
-    // Check if item already exists in cart
     const [existing] = await pool.query(
       'SELECT * FROM Cart_Game WHERE Cart_ID = ? AND Game_ID = ?',
       [cartId, gameId]
     );
 
     if (existing.length > 0) {
-      // Update quantity if item exists
       await pool.query(
         'UPDATE Cart_Game SET Quantity = ? WHERE Cart_ID = ? AND Game_ID = ?',
         [quantity, cartId, gameId]
       );
     } else {
-      // Insert new item
       await pool.query(
         'INSERT INTO Cart_Game (Cart_ID, Game_ID, Quantity) VALUES (?, ?, ?)',
         [cartId, gameId, quantity]
       );
     }
-
-    // Get game price
     const [game] = await pool.query(
       'SELECT Price FROM Game WHERE Game_ID = ?',
       [gameId]
     );
-
-    // Get current cart total
     const [cart] = await pool.query(
       'SELECT Total FROM Cart WHERE Cart_ID = ?',
       [cartId]
     );
 
-    // Always parse as float
     const cartTotal = parseFloat(cart[0].Total) || 0;
     const gamePrice = parseFloat(game[0].Price) || 0;
     const addAmount = gamePrice * quantity;
     const newTotal = parseFloat((cartTotal + addAmount).toFixed(2));
-
-    // Update cart total
     await pool.query(
       'UPDATE Cart SET Total = ? WHERE Cart_ID = ?',
       [newTotal, cartId]
@@ -133,11 +122,11 @@ app.post('/api/cart/add', async (req, res) => {
   }
 });
 
+//remove
 app.post('/api/cart/remove', async (req, res) => {
   try {
     const { cartId, gameId } = req.body;
     
-    // Get current quantity and price
     const [cartGame] = await pool.query(
       'SELECT Quantity FROM Cart_Game WHERE Cart_ID = ? AND Game_ID = ?',
       [cartId, gameId]
@@ -157,20 +146,18 @@ app.post('/api/cart/remove', async (req, res) => {
       [cartId]
     );
 
-    // Always parse as float
+
     const cartTotal = parseFloat(cart[0].Total) || 0;
     const gamePrice = parseFloat(game[0].Price) || 0;
     const removeAmount = gamePrice * cartGame[0].Quantity;
-    // Never allow negative total
+
     const newTotal = Math.max(0, parseFloat((cartTotal - removeAmount).toFixed(2)));
 
-    // Update cart total
     await pool.query(
       'UPDATE Cart SET Total = ? WHERE Cart_ID = ?',
       [newTotal, cartId]
     );
 
-    // Remove from Cart_Game
     await pool.query(
       'DELETE FROM Cart_Game WHERE Cart_ID = ? AND Game_ID = ?',
       [cartId, gameId]
@@ -189,17 +176,16 @@ app.post('/api/cart/remove', async (req, res) => {
   }
 });
 
+//update cart 
 app.post('/api/cart/update', async (req, res) => {
   try {
     const { cartId, gameId, quantity } = req.body;
-    
-    // Get current price
+
     const [game] = await pool.query(
       'SELECT Price FROM Game WHERE Game_ID = ?',
       [gameId]
     );
 
-    // Get current quantity
     const [cartGame] = await pool.query(
       'SELECT Quantity FROM Cart_Game WHERE Cart_ID = ? AND Game_ID = ?',
       [cartId, gameId]
@@ -213,8 +199,6 @@ app.post('/api/cart/update', async (req, res) => {
       'SELECT Total FROM Cart WHERE Cart_ID = ?',
       [cartId]
     );
-
-    // Always parse as float
     const cartTotal = parseFloat(cart[0].Total) || 0;
     const gamePrice = parseFloat(game[0].Price) || 0;
     const oldAmount = gamePrice * cartGame[0].Quantity;
@@ -222,13 +206,11 @@ app.post('/api/cart/update', async (req, res) => {
     const priceDiff = newAmount - oldAmount;
     const newTotal = Math.max(0, parseFloat((cartTotal + priceDiff).toFixed(2)));
 
-    // Update Cart_Game
     await pool.query(
       'UPDATE Cart_Game SET Quantity = ? WHERE Cart_ID = ? AND Game_ID = ?',
       [quantity, cartId, gameId]
     );
 
-    // Update Cart total
     await pool.query(
       'UPDATE Cart SET Total = ? WHERE Cart_ID = ?',
       [newTotal, cartId]
@@ -247,11 +229,11 @@ app.post('/api/cart/update', async (req, res) => {
   }
 });
 
+//items
 app.get('/api/cart/:cartId', async (req, res) => {
   try {
     const { cartId } = req.params;
     
-    // Get cart items
     const [items] = await pool.query(
       'SELECT g.Game_ID, g.Title, g.Price, cg.Quantity, (g.Price * cg.Quantity) as Total_Price ' +
       'FROM Cart_Game cg ' +
@@ -260,13 +242,11 @@ app.get('/api/cart/:cartId', async (req, res) => {
       [cartId]
     );
 
-    // Get cart total
     const [cart] = await pool.query(
       'SELECT Total FROM Cart WHERE Cart_ID = ?',
       [cartId]
     );
 
-    // Format items to match frontend expectations
     const formattedItems = items.map(item => ({
       gameId: item.Game_ID,
       title: item.Title,
@@ -285,7 +265,6 @@ app.get('/api/cart/:cartId', async (req, res) => {
   }
 });
 
-// Test database connection
 app.get('/api/test', async (req, res) => {
   try {
     const [result] = await pool.query('SELECT 1 + 1 AS solution');
@@ -299,7 +278,7 @@ app.get('/api/test', async (req, res) => {
   }
 });
 
-// Get all games
+//all games for games page
 app.get('/api/games', async (req, res) => {
   try {
     const [rows] = await pool.query('SELECT * FROM Game');
@@ -310,7 +289,7 @@ app.get('/api/games', async (req, res) => {
   }
 });
 
-// Get game by ID
+//by id
 app.get('/api/games/:id', async (req, res) => {
   try {
     const [rows] = await pool.query('SELECT * FROM Game WHERE Game_ID = ?', [req.params.id]);
@@ -324,7 +303,6 @@ app.get('/api/games/:id', async (req, res) => {
   }
 });
 
-// Get all customers
 app.get('/api/customers', async (req, res) => {
   try {
     const [rows] = await pool.query('SELECT * FROM Customer');
@@ -335,7 +313,6 @@ app.get('/api/customers', async (req, res) => {
   }
 });
 
-// Get customer by ID
 app.get('/api/customers/:id', async (req, res) => {
   try {
     const [rows] = await pool.query('SELECT * FROM Customer WHERE Customer_ID = ?', [req.params.id]);
@@ -349,7 +326,7 @@ app.get('/api/customers/:id', async (req, res) => {
   }
 });
 
-// Get all publishers
+//publishers
 app.get('/api/publishers', async (req, res) => {
   try {
     const [rows] = await pool.query('SELECT * FROM Publisher');
@@ -360,7 +337,7 @@ app.get('/api/publishers', async (req, res) => {
   }
 });
 
-// Get customer cart
+//cart
 app.get('/api/carts/:customerId', async (req, res) => {
   try {
     const [cart] = await pool.query(
@@ -390,13 +367,12 @@ app.get('/api/carts/:customerId', async (req, res) => {
   }
 });
 
-// Add game to cart
+//add
 app.post('/api/carts/:cartId/add', async (req, res) => {
   const { gameId, quantity } = req.body;
   const { cartId } = req.params;
   
   try {
-    // Check if game already exists in cart
     const [existingItems] = await pool.query(
       'SELECT * FROM Cart_Game WHERE Cart_ID = ? AND Game_ID = ?',
       [cartId, gameId]
@@ -416,7 +392,6 @@ app.post('/api/carts/:cartId/add', async (req, res) => {
       );
     }
     
-    // Update cart total
     const [gameResult] = await pool.query(
       'SELECT Price FROM Game WHERE Game_ID = ?',
       [gameId]
@@ -442,7 +417,7 @@ app.post('/api/carts/:cartId/add', async (req, res) => {
   }
 });
 
-// Get all orders for a customer
+//all orders for a customer
 app.get('/api/orders/:customerId', async (req, res) => {
   try {
     const [rows] = await pool.query(
@@ -456,7 +431,6 @@ app.get('/api/orders/:customerId', async (req, res) => {
   }
 });
 
-// Create a new order
 app.post('/api/orders', async (req, res) => {
   const { customerId, paymentMethod, billingEmail, total } = req.body;
   
@@ -476,11 +450,10 @@ app.post('/api/orders', async (req, res) => {
   }
 });
 
-// Custom SQL query endpoint
+//query
 app.post('/api/query', async (req, res) => {
   const { query } = req.body;
 
-  // Basic security check - only allow SELECT queries
   if (!query.trim().toLowerCase().startsWith('select')) {
     return res.status(403).json({ error: 'Only SELECT queries are allowed' });
   }
@@ -494,7 +467,7 @@ app.post('/api/query', async (req, res) => {
   }
 });
 
-// Login endpoint
+//login
 app.post('/api/auth/login', async (req, res) => {
   try {
     const { userType, Billing_Email, License_Number } = req.body;
@@ -528,17 +501,14 @@ app.post('/api/auth/login', async (req, res) => {
     let cartInfo = null;
 
     if (userType === 'customer') {
-      // 1. Check if a cart exists for this customer
       const [cartRows] = await pool.query('SELECT * FROM Cart WHERE Customer_ID = ?', [user.Customer_ID]);
       let cartId;
       if (cartRows.length === 0) {
-        // 2. If not, create a new cart
         const [cartResult] = await pool.query('INSERT INTO Cart (Customer_ID, Total) VALUES (?, 0)', [user.Customer_ID]);
         cartId = cartResult.insertId;
       } else {
         cartId = cartRows[0].Cart_ID;
       }
-      // 3. Ensure entry in Customer_Cart
       const [ccRows] = await pool.query('SELECT * FROM Customer_Cart WHERE Customer_ID = ? AND Cart_ID = ?', [user.Customer_ID, cartId]);
       if (ccRows.length === 0) {
         await pool.query('INSERT INTO Customer_Cart (Customer_ID, Cart_ID) VALUES (?, ?)', [user.Customer_ID, cartId]);
@@ -570,7 +540,7 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-// Register endpoint
+//register
 app.post('/api/auth/register', async (req, res) => {
   try {
     const { userType } = req.body;
@@ -578,7 +548,6 @@ app.post('/api/auth/register', async (req, res) => {
     if (userType === 'customer') 
     {
       const { Name, Billing_Email, Payment_Method } = req.body;
-      // Check if customer already exists
       const [existing] = await pool.query('SELECT * FROM Customer WHERE Billing_Email = ?', [Billing_Email]);
       if (existing.length > 0) 
       {
@@ -591,7 +560,6 @@ app.post('/api/auth/register', async (req, res) => {
       return res.json({ success: true, userType: 'customer', user: { Name, Billing_Email, Payment_Method } });
     } else if (userType === 'publisher') {
       const { License_Number, Type } = req.body;
-      // Check if publisher already exists
       const [existing] = await pool.query('SELECT * FROM Publisher WHERE License_Number = ?', [License_Number]);
       if (existing.length > 0) {
         return res.status(400).json({ error: 'Publisher already registered with this license number' });
@@ -610,7 +578,6 @@ app.post('/api/auth/register', async (req, res) => {
   }
 });
 
-// Get all forums
 app.get('/api/forums', async (req, res) => {
   try {
     const [rows] = await pool.query('SELECT * FROM Forum ORDER BY Forum_ID DESC');
@@ -621,12 +588,10 @@ app.get('/api/forums', async (req, res) => {
   }
 });
 
-// Create new forum post
+//forum
 app.post('/api/forums', async (req, res) => {
   try {
     const { title, type, description } = req.body;
-    
-    // Validate input
     if (!title || !type || !description) {
       return res.status(400).json({ error: 'All fields are required' });
     }
@@ -636,7 +601,7 @@ app.post('/api/forums', async (req, res) => {
       [title, type, description]
     );
 
-    // Get the newly created forum
+
     const [newForum] = await pool.query(
       'SELECT * FROM Forum WHERE Forum_ID = ?',
       [result.insertId]
@@ -649,33 +614,28 @@ app.post('/api/forums', async (req, res) => {
   }
 });
 
-// Update forum rating
+//forum rating
 app.patch('/api/forums/:forumId/rating', async (req, res) => {
   try {
     const { rating } = req.body;
     const { forumId } = req.params;
     
-    // First, check if rating exists for this user
     const [existingRating] = await pool.query(
       'SELECT * FROM Forum_Rating WHERE Forum_ID = ?',
       [forumId]
     );
 
     if (existingRating.length > 0) {
-      // Update existing rating
       await pool.query(
         'UPDATE Forum_Rating SET Rating = ? WHERE Forum_ID = ?',
         [rating, forumId]
       );
     } else {
-      // Create new rating
       await pool.query(
         'INSERT INTO Forum_Rating (Forum_ID, Rating) VALUES (?, ?)',
         [forumId, rating]
       );
     }
-
-    // Get updated forum with new average rating
     const [updatedForum] = await pool.query(
       'SELECT f.*, AVG(r.Rating) as average_rating FROM Forum f LEFT JOIN Forum_Rating r ON f.Forum_ID = r.Forum_ID WHERE f.Forum_ID = ? GROUP BY f.Forum_ID',
       [forumId]
@@ -688,12 +648,12 @@ app.patch('/api/forums/:forumId/rating', async (req, res) => {
   }
 });
 
-// Add this endpoint after your existing routes
+//for running queries
 app.get('/api/run-query', async (req, res) => {
   const queryNumber = req.query.number;
   
   try {
-    // Read query from queries.sql
+    //find number
     const queries = fs.readFileSync('queries.sql', 'utf8').split(';');
     const query = queries[queryNumber - 1].trim();
     
@@ -707,7 +667,7 @@ app.get('/api/run-query', async (req, res) => {
   }
 });
 
-// Start server
+//starts server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

@@ -32,47 +32,71 @@ import React, { useState } from 'react';
    const presetQueries = [
     {
       name: 'Query 1',
-      query: `SELECT 
-      g.Title AS Game_Title, 
-      g.Rating, 
-      p.Publisher_ID, 
-      p.License_Number, 
-      COALESCE(COUNT(cg.Game_ID), 0) AS Total_Purchases
-  FROM Game g
-  JOIN Publisher p ON g.Publisher_ID = p.Publisher_ID
-  LEFT JOIN Cart_Game cg ON g.Game_ID = cg.Game_ID
-  WHERE g.Genre = 'RPG'
-  GROUP BY g.Game_ID, g.Title, g.Rating, p.Publisher_ID, p.License_Number;`
+query: `SELECT 
+    g.Title AS Game_Title, 
+    g.Rating, 
+    p.Publisher_ID, 
+    p.License_Number, 
+    COALESCE(SUM(cg.Quantity), 0) AS Total_Purchases
+FROM Game g
+JOIN Publisher p ON g.Publisher_ID = p.Publisher_ID
+LEFT JOIN Cart_Game cg ON g.Game_ID = cg.Game_ID
+WHERE g.Genre = 'RPG'
+GROUP BY g.Game_ID, g.Title, g.Rating, p.Publisher_ID, p.License_Number;`
+
     },
     {
       name: 'Query 2',
-      query: `SELECT p.Publisher_ID, p.License_Number, total_revenue
-  FROM Publisher p
-  JOIN (
-      SELECT g.Publisher_ID, SUM(c.Total) AS total_revenue
-      FROM Game g
-      JOIN Cart c ON g.Game_ID = c.Cart_ID
-      GROUP BY g.Publisher_ID
-  ) revenue_per_publisher ON p.Publisher_ID = revenue_per_publisher.Publisher_ID
-  WHERE total_revenue = (
-      SELECT MAX(total_revenue)
-      FROM (
-          SELECT SUM(c.Total) AS total_revenue
-          FROM Game g
-          JOIN Cart c ON g.Game_ID = c.Cart_ID
-          GROUP BY g.Publisher_ID
-      ) subquery
-  );`
+query: `SELECT 
+    p.Publisher_ID, 
+    p.License_Number, 
+    revenue_per_publisher.total_revenue
+FROM Publisher p
+JOIN (
+    SELECT 
+        g.Publisher_ID, 
+        SUM(g.Price * cg.Quantity) AS total_revenue
+    FROM Game g
+    JOIN Cart_Game cg ON g.Game_ID = cg.Game_ID
+    GROUP BY g.Publisher_ID
+) revenue_per_publisher ON p.Publisher_ID = revenue_per_publisher.Publisher_ID
+WHERE revenue_per_publisher.total_revenue = (
+    SELECT MAX(total_revenue)
+    FROM (
+        SELECT 
+            g.Publisher_ID, 
+            SUM(g.Price * cg.Quantity) AS total_revenue
+        FROM Game g
+        JOIN Cart_Game cg ON g.Game_ID = cg.Game_ID
+        GROUP BY g.Publisher_ID
+    ) subquery
+);`
+
     },
     {
       name: 'Query 3',
-      query: `SELECT c.Customer_ID, c.Name, SUM(o.Total) AS Total_Spent
-  FROM Customer c
-  JOIN Orders o ON c.Customer_ID = o.Customer_ID
-  GROUP BY c.Customer_ID, c.Name
-  HAVING SUM(o.Total) > (
-      SELECT AVG(Total) FROM Orders
-  );`
+query: `SELECT 
+    c.Customer_ID, 
+    c.Name, 
+    SUM(g.Price * cg.Quantity) AS Total_Spent
+FROM Customer c
+JOIN Customer_Cart cc ON c.Customer_ID = cc.Customer_ID
+JOIN Cart_Game cg ON cc.Cart_ID = cg.Cart_ID
+JOIN Game g ON cg.Game_ID = g.Game_ID
+GROUP BY c.Customer_ID, c.Name
+HAVING SUM(g.Price * cg.Quantity) > (
+    SELECT AVG(customer_total)
+    FROM (
+        SELECT 
+            cc.Customer_ID, 
+            SUM(g.Price * cg.Quantity) AS customer_total
+        FROM Customer_Cart cc
+        JOIN Cart_Game cg ON cc.Cart_ID = cg.Cart_ID
+        JOIN Game g ON cg.Game_ID = g.Game_ID
+        GROUP BY cc.Customer_ID
+    ) subquery
+);`
+
     },
     {
       name: 'Query 4',
